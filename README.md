@@ -6,6 +6,16 @@ O **AlertaSP** é uma plataforma de prevenção e monitoramento de alagamentos e
 
 Este repositório é a entrega de **Operating Systems**. Ele provisiona automaticamente, via Shell Script, uma VM Linux que hospeda a API AlertaSP (desenvolvida em SOA), com rede, DNS, firewall, banco de dados, proxy reverso, monitoramento, auditoria e teste de falha.
 
+## Integrantes
+
+| Nome | RM |
+|---|---|
+| Bento Rangel | RM559124 |
+| Eric Yuji | RM554869 |
+| Higor Batista | RM558907 |
+| Kaue Pires | RM554403 |
+| Ricardo Di Tilia | RM555155 |
+
 ODS relacionados: **11** (Cidades e comunidades sustentáveis), **13** (Ação contra a mudança do clima) e **9** (Indústria, inovação e infraestrutura).
 
 ## Arquitetura
