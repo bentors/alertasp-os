@@ -1,0 +1,9 @@
+# Só o log de métricas gira; audit.log e provision-*.log são trilha de auditoria e ficam
+/var/log/alertasp/monitor.log {
+    daily
+    rotate 7
+    compress
+    missingok
+    notifempty
+    copytruncate
+}

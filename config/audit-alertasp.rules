@@ -1,0 +1,7 @@
+# auditd: registra quem altera configurações críticas do AlertaSP
+# Consulta: sudo ausearch -k alertasp_config -i
+-w /etc/alertasp/ -p wa -k alertasp_config
+-w /etc/systemd/system/alertasp-app.service -p wa -k alertasp_servico
+-w /etc/systemd/system/alertasp-monitor.service -p wa -k alertasp_servico
+-w /etc/netplan/ -p wa -k alertasp_rede
+-w /etc/hosts -p wa -k alertasp_rede
