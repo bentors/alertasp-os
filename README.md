@@ -106,6 +106,47 @@ O teste de falha:
 2. Mata a API com `kill -9`, o systemd reinicia, e a API volta a responder HTTP 200. Enquanto ela está fora, o monitor registra ALERTA.
 3. Estressa CPU e memória por 40 s (`stress-ng`), e o monitor registra ALERTA de CPU e memória.
 4. Ocupa o disco até passar do limite com um arquivo temporário, o monitor registra ALERTA de disco, e o arquivo é removido.
+5. Executa um script com falha proposital (iniciar um serviço inexistente), e o erro aparece no `audit.log` com script, linha, comando e código de saída.
+
+### 4. Teste de reinicialização
+
+Os serviços são habilitados no boot, então devem voltar sozinhos depois de reiniciar a máquina:
+
+```bash
+sudo reboot
+# depois de logar novamente:
+systemctl status alertasp-app alertasp-monitor --no-pager
+grep 'monitor iniciado' /var/log/alertasp/monitor.log | tail -2   # nova inicialização após o boot
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1/v3/api-docs   # 200
+```
+
+### 5. Administração do serviço de monitoramento
+
+```bash
+sudo systemctl stop alertasp-monitor      # interrompe (registra "monitor parado")
+sudo systemctl start alertasp-monitor     # inicia (registra "monitor iniciado")
+sudo systemctl restart alertasp-monitor   # reinicia
+systemctl is-enabled alertasp-monitor     # enabled = sobe com o sistema
+```
+
+## Evidências
+
+As evidências ficam em [`evidencias/`](evidencias/):
+
+- `evidencias-<data>.txt`: relatório gerado por `scripts/coletar-evidencias.sh`.
+- Prints numerados na ordem da demonstração:
+
+| Arquivo | O que mostra |
+|---|---|
+| `01-provision.png` | Fim do `provision.sh` com todos os passos OK |
+| `02-rede-dns.png` | `hostnamectl`, `ip -br addr` e `resolvectl status` |
+| `03-firewall.png` | `sudo ufw status verbose` |
+| `04-servicos.png` | `systemctl status` de postgresql, nginx, alertasp-app e alertasp-monitor |
+| `05-swagger.png` | Swagger aberto no navegador do Windows (`http://192.168.56.10/swagger-ui.html`) |
+| `06-monitor.png` | `tail -f /var/log/alertasp/monitor.log` com métricas |
+| `07-teste-falha.png` | Saída do `teste-falha.sh` com recuperações e alertas |
+| `08-auditoria.png` | `audit.log` e `sudo ausearch -k alertasp_config -i` |
+| `09-reboot.png` | Serviços ativos após `sudo reboot` |
 
 ## Logs
 
@@ -132,7 +173,8 @@ systemctl status alertasp-app alertasp-monitor
 |---|---|
 | 0:00–0:45 | Problema (alagamentos em SP), solução AlertaSP e papel da infraestrutura |
 | 0:45–1:30 | Estrutura do repositório e `config.env` |
-| 1:30–3:30 | `sudo ./provision.sh` numa VM limpa (acelere a instalação e o build), destacando rede, DNS, dependências e serviços |
-| 3:30–4:15 | Swagger aberto no navegador do Windows, `ip a`, `resolvectl`, `ufw status` e `systemctl status` |
-| 4:15–6:00 | `teste-falha.sh` com `tail -f monitor.log` ao lado: serviços voltando e alertas aparecendo |
-| 6:00–7:00 | `audit.log`, `ausearch` e o relatório de evidências, mais a conclusão |
+| 1:30–3:15 | `sudo ./provision.sh` numa VM limpa (acelere a instalação e o build), destacando rede, DNS, dependências e serviços |
+| 3:15–4:00 | Swagger aberto no navegador do Windows, `ip a`, `resolvectl`, `ufw status` e `systemctl status` |
+| 4:00–5:45 | `teste-falha.sh` com `tail -f monitor.log` ao lado: serviços voltando, alertas aparecendo e falha controlada no `audit.log` |
+| 5:45–6:30 | `systemctl stop/start` do monitor, `sudo reboot` (acelere) e serviços ativos após o boot |
+| 6:30–7:00 | `audit.log`, `ausearch`, relatório de evidências e conclusão |
