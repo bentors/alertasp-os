@@ -1,0 +1,22 @@
+[Unit]
+Description=AlertaSP API (Spring Boot)
+# postgresql.service no Ubuntu é só um agregador; o banco real é o cluster postgresql@16-main
+After=network-online.target postgresql.service postgresql@16-main.service
+Wants=network-online.target
+Requires=postgresql.service
+# Sem limite de reinícios: o serviço sempre volta após falha
+StartLimitIntervalSec=0
+
+[Service]
+User=alertasp
+Group=alertasp
+WorkingDirectory=/opt/alertasp
+EnvironmentFile=/etc/alertasp/alertasp.env
+ExecStart=/usr/bin/java $JAVA_OPTS -jar /opt/alertasp/app.jar
+SuccessExitStatus=143
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
