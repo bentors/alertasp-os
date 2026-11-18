@@ -53,7 +53,7 @@ audit OK "TESTE: API respondendo novamente (HTTP 200) $((SECONDS - t0))s apos re
 show_alerts "$start"
 
 # 3) Estresse de CPU e memória -> alertas
-command -v stress-ng >/dev/null || DEBIAN_FRONTEND=noninteractive apt-get install -y -q stress-ng
+command -v stress-ng >/dev/null || DEBIAN_FRONTEND=noninteractive apt-get install -y -qq stress-ng >/dev/null
 start=$(wc -l < "$MON_LOG")
 audit INFO "TESTE: estressando CPU (todos os nucleos) e memoria por 40s"
 stress-ng --cpu 0 --vm 1 --vm-bytes 90% --timeout 40s --quiet

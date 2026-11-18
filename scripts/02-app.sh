@@ -11,13 +11,13 @@ audit INFO "===== 02 - Provisionamento da aplicacao ====="
 
 # --- Dependências ---
 apt-get install -y -q openjdk-21-jdk-headless maven postgresql nginx
-audit OK "dependencias: $(java -version 2>&1 | head -1); $(mvn -v | head -1); $(psql --version)"
+audit OK "dependencias: $(java -version 2>&1 | head -1); $(mvn -B -v | head -1); $(psql --version)"
 
 # --- Banco de dados ---
 systemctl enable --now postgresql
 ENV_FILE=/etc/alertasp/alertasp.env
 if [[ -f $ENV_FILE ]]; then
-  DB_PASS=$(sed -n 's/^SPRING_DATASOURCE_PASSWORD=//p' "$ENV_FILE")   # reaproveita senha existente
+  DB_PASS=$(sed -n 's/^DB_PASSWORD=//p' "$ENV_FILE")   # reaproveita senha existente
 else
   DB_PASS=$(openssl rand -hex 16)
 fi
@@ -28,11 +28,11 @@ psql_q() { (cd /tmp && sudo -u postgres psql -v ON_ERROR_STOP=1 -tAc "$1"); }
 [[ $(psql_q "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'") == 1 ]] || psql_q "CREATE DATABASE $DB_NAME OWNER $DB_USER"
 audit OK "PostgreSQL: banco '$DB_NAME' e usuario '$DB_USER' prontos (Flyway cria as tabelas no start da API)"
 
-# --- Variáveis de ambiente da aplicação (segredo fora do repositório) ---
+# --- Variáveis de ambiente da aplicação (mesmas do docker-compose da API; segredo fora do repo) ---
 cat > "$ENV_FILE" <<EOF
-SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/$DB_NAME
-SPRING_DATASOURCE_USERNAME=$DB_USER
-SPRING_DATASOURCE_PASSWORD=$DB_PASS
+DB_URL=jdbc:postgresql://localhost:5432/$DB_NAME
+DB_USER=$DB_USER
+DB_PASSWORD=$DB_PASS
 SERVER_PORT=8080
 JAVA_OPTS=$JAVA_OPTS
 EOF
