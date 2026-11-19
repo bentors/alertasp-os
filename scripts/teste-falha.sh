@@ -59,16 +59,20 @@ show_alerts "$start"
 
 # 3) Estresse de CPU e memória -> alertas
 command -v stress-ng >/dev/null || DEBIAN_FRONTEND=noninteractive apt-get install -y -qq stress-ng >/dev/null
-# nice 19: a carga não tira CPU do monitor, que precisa continuar medindo
+# Carga de 95% (não 100%) e nice 19: a VM continua respondendo e o monitor segue medindo
 start=$(wc -l < "$MON_LOG")
-audit INFO "TESTE: estressando CPU (todos os nucleos, 100%) por 40s"
-nice -n 19 stress-ng --cpu 0 --timeout 40s --quiet
+audit INFO "TESTE: estressando CPU (todos os nucleos, ~95%) por 40s"
+nice -n 19 stress-ng --cpu 0 --cpu-load 95 --timeout 40s --quiet
 show_alerts "$start"
 
-# memória reservada uma vez e mantida parada (--vm-hang 0), sem reescrever sem parar
+# Memória: reserva o necessário para ficar 5 pontos acima do limite, uma vez só, e segura
+read -r mem_total mem_avail < <(awk '/^MemTotal/{t=$2} /^MemAvailable/{a=$2} END{print t, a}' /proc/meminfo)
+mem_kb=$(( mem_total * (MEM_LIMIT + 5) / 100 - (mem_total - mem_avail) ))
 start=$(wc -l < "$MON_LOG")
-audit INFO "TESTE: ocupando 85% da memoria disponivel por 40s"
-nice -n 19 stress-ng --vm 1 --vm-bytes 85% --vm-keep --vm-hang 0 --timeout 40s --quiet
+if (( mem_kb > 0 )); then
+  audit INFO "TESTE: ocupando $((mem_kb / 1024)) MB de memoria por 40s para passar de ${MEM_LIMIT}%"
+  nice -n 19 stress-ng --vm 1 --vm-bytes "${mem_kb}k" --vm-populate --vm-keep --vm-hang 0 --timeout 40s --quiet
+fi
 show_alerts "$start"
 
 # 4) Disco cheio -> alerta (arquivo temporário até passar do limite, removido no fim)
