@@ -59,10 +59,11 @@ show_alerts "$start"
 
 # 3) Estresse de CPU e memória -> alertas
 command -v stress-ng >/dev/null || DEBIAN_FRONTEND=noninteractive apt-get install -y -qq stress-ng >/dev/null
-# Carga de 95% (não 100%) e nice 19: a VM continua respondendo e o monitor segue medindo
+# Carga de 95% em fatias de 1s (950ms ocupado, 50ms livre) e nice 19: em VM sobre
+# Hyper-V, 100% contínuo congela a VM e fatias curtas não passam de ~55%
 start=$(wc -l < "$MON_LOG")
 audit INFO "TESTE: estressando CPU (todos os nucleos, ~95%) por 40s"
-nice -n 19 stress-ng --cpu 0 --cpu-load 95 --timeout 40s --quiet
+nice -n 19 stress-ng --cpu 0 --cpu-load 95 --cpu-load-slice 1000 --timeout 40s --quiet
 show_alerts "$start"
 
 # Memória: reserva o necessário para ficar 5 pontos acima do limite, uma vez só, e segura
