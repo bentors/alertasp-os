@@ -59,9 +59,16 @@ show_alerts "$start"
 
 # 3) Estresse de CPU e memória -> alertas
 command -v stress-ng >/dev/null || DEBIAN_FRONTEND=noninteractive apt-get install -y -qq stress-ng >/dev/null
+# nice 19: a carga não tira CPU do monitor, que precisa continuar medindo
 start=$(wc -l < "$MON_LOG")
-audit INFO "TESTE: estressando CPU (todos os nucleos) e memoria por 40s"
-stress-ng --cpu 0 --vm 1 --vm-bytes 90% --timeout 40s --quiet
+audit INFO "TESTE: estressando CPU (todos os nucleos, 100%) por 40s"
+nice -n 19 stress-ng --cpu 0 --timeout 40s --quiet
+show_alerts "$start"
+
+# memória reservada uma vez e mantida parada (--vm-hang 0), sem reescrever sem parar
+start=$(wc -l < "$MON_LOG")
+audit INFO "TESTE: ocupando 85% da memoria disponivel por 40s"
+nice -n 19 stress-ng --vm 1 --vm-bytes 85% --vm-keep --vm-hang 0 --timeout 40s --quiet
 show_alerts "$start"
 
 # 4) Disco cheio -> alerta (arquivo temporário até passar do limite, removido no fim)
