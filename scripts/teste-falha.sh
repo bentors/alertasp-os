@@ -45,9 +45,13 @@ kill_and_recover alertasp-monitor
 # 2) API morta -> systemd reinicia e ela volta a responder
 start=$(wc -l < "$MON_LOG")
 kill_and_recover alertasp-app
-t0=$SECONDS
-until [[ $(http_code) == 200 ]]; do
-  (( SECONDS - t0 < 180 )) || { audit ERRO "API nao voltou a responder"; exit 1; }
+t0=$SECONDS; last=0
+while code=$(http_code); [[ $code != 200 ]]; do
+  (( SECONDS - t0 < API_WAIT )) || { audit ERRO "API nao voltou a responder em ${API_WAIT}s (HTTP $code)"; exit 1; }
+  if (( SECONDS - last >= 30 )); then
+    audit INFO "TESTE: aguardando a API subir... HTTP $code ($((SECONDS - t0))s)"
+    last=$SECONDS
+  fi
   sleep 2
 done
 audit OK "TESTE: API respondendo novamente (HTTP 200) $((SECONDS - t0))s apos reinicio"
