@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Teste de falha: derruba os serviços com SIGKILL e força alto consumo de CPU,
-# memória e disco, provando que o systemd recupera os processos e que o
-# monitor gera ALERTAS. Tudo fica registrado no log de auditoria.
+# Teste de falha: derruba os serviços com SIGKILL, força alto consumo de CPU,
+# memória e disco e provoca uma falha controlada em script, provando que o
+# systemd recupera os processos, que o monitor gera ALERTAS e que erros ficam
+# registrados no log de auditoria.
 set -Eeuo pipefail
 source "$(dirname "$0")/lib.sh"
 require_root
@@ -71,5 +72,14 @@ sleep $(( MONITOR_INTERVAL * 2 + 2 ))
 rm -f "$FILL"
 audit INFO "TESTE: arquivo de teste removido, disco liberado"
 show_alerts "$start"
+
+# 5) Falha controlada em um script -> erro registrado na auditoria
+audit INFO "TESTE: executando script com falha proposital (iniciar servico inexistente)"
+if bash -c 'set -Eeuo pipefail; source "$1/scripts/lib.sh"; audit INFO "passo que vai falhar"; systemctl start alertasp-inexistente' \
+     falha-controlada.sh "$ROOT_DIR"; then
+  audit ERRO "TESTE: a falha proposital nao foi detectada"; exit 1
+fi
+audit OK "TESTE: falha detectada e registrada em $AUDIT_LOG:"
+grep 'falha-controlada.sh | falha' "$AUDIT_LOG" | tail -1
 
 audit OK "===== Teste de falha concluido: servicos recuperados e alertas gerados ====="
