@@ -1,0 +1,263 @@
+
+########## Sistema
+$ hostnamectl; uptime
+ Static hostname: alertasp
+       Icon name: computer-vm
+         Chassis: vm 🖴
+      Machine ID: 18739da7bcc24b31a36c44639abd5525
+         Boot ID: 2051ed824ec5420d9657f63e53951450
+  Virtualization: oracle
+Operating System: Ubuntu 24.04.5 LTS
+          Kernel: Linux 6.8.0-149-generic
+    Architecture: x86-64
+ Hardware Vendor: innotek GmbH
+  Hardware Model: VirtualBox
+Firmware Version: VirtualBox
+   Firmware Date: Fri 2006-12-01
+    Firmware Age: 19y 11month 2w 5d
+ 19:39:56 up 2 min,  1 user,  load average: 0.41, 0.26, 0.10
+
+########## Rede (IP)
+$ ip -br addr
+lo               UNKNOWN        127.0.0.1/8 ::1/128 
+enp0s3           UP             10.0.2.15/24 metric 100 fd17:625c:f037:2:a00:27ff:fe74:9779/64 fe80::a00:27ff:fe74:9779/64 
+enp0s8           UP             192.168.56.10/24 fe80::a00:27ff:fe66:c2bd/64 
+
+########## Rotas
+$ ip route
+default via 10.0.2.2 dev enp0s3 proto dhcp src 10.0.2.15 metric 100 
+10.0.2.0/24 dev enp0s3 proto kernel scope link src 10.0.2.15 metric 100 
+10.0.2.2 dev enp0s3 proto dhcp scope link src 10.0.2.15 metric 100 
+192.168.15.1 via 10.0.2.2 dev enp0s3 proto dhcp src 10.0.2.15 metric 100 
+192.168.56.0/24 dev enp0s8 proto kernel scope link src 192.168.56.10 
+
+########## DNS
+$ resolvectl status | head -20; getent hosts alertasp.local github.com
+Global
+           Protocols: -LLMNR -mDNS -DNSOverTLS DNSSEC=no/unsupported
+    resolv.conf mode: stub
+  Current DNS Server: 8.8.8.8
+         DNS Servers: 8.8.8.8 1.1.1.1
+Fallback DNS Servers: 9.9.9.9
+          DNS Domain: ~.
+
+Link 2 (enp0s3)
+    Current Scopes: DNS
+         Protocols: +DefaultRoute -LLMNR -mDNS -DNSOverTLS DNSSEC=no/unsupported
+Current DNS Server: 192.168.15.1
+       DNS Servers: 192.168.15.1 fd17:625c:f037:2::3
+
+Link 3 (enp0s8)
+    Current Scopes: none
+         Protocols: -DefaultRoute -LLMNR -mDNS -DNSOverTLS DNSSEC=no/unsupported
+192.168.56.10   alertasp.local alertasp
+4.228.31.150    github.com
+
+########## Firewall
+$ ufw status verbose
+Status: active
+Logging: on (low)
+Default: deny (incoming), allow (outgoing), disabled (routed)
+New profiles: skip
+
+To                         Action      From
+--                         ------      ----
+22/tcp                     ALLOW IN    Anywhere                  
+80/tcp                     ALLOW IN    Anywhere                  
+22/tcp (v6)                ALLOW IN    Anywhere (v6)             
+80/tcp (v6)                ALLOW IN    Anywhere (v6)             
+
+
+########## Portas abertas
+$ ss -tlnp
+State  Recv-Q Send-Q Local Address:Port Peer Address:PortProcess                                                                      
+LISTEN 0      200        127.0.0.1:5432      0.0.0.0:*    users:(("postgres",pid=901,fd=6))                                           
+LISTEN 0      4096      127.0.0.54:53        0.0.0.0:*    users:(("systemd-resolve",pid=604,fd=17))                                   
+LISTEN 0      4096   127.0.0.53%lo:53        0.0.0.0:*    users:(("systemd-resolve",pid=604,fd=15))                                   
+LISTEN 0      4096         0.0.0.0:22        0.0.0.0:*    users:(("sshd",pid=1075,fd=3),("systemd",pid=1,fd=91))                      
+LISTEN 0      511          0.0.0.0:80        0.0.0.0:*    users:(("nginx",pid=955,fd=7),("nginx",pid=954,fd=7),("nginx",pid=953,fd=7))
+LISTEN 0      100                *:8080            *:*    users:(("java",pid=988,fd=19))                                              
+LISTEN 0      4096            [::]:22           [::]:*    users:(("sshd",pid=1075,fd=4),("systemd",pid=1,fd=92))                      
+
+########## Servicos
+$ systemctl --no-pager status postgresql nginx alertasp-app alertasp-monitor | grep -E '●|Loaded|Active|Main PID'
+● postgresql.service - PostgreSQL RDBMS
+     Loaded: loaded (/usr/lib/systemd/system/postgresql.service; enabled; preset: enabled)
+     Active: active (exited) since Thu 2026-11-19 19:37:59 -03; 1min 57s ago
+   Main PID: 986 (code=exited, status=0/SUCCESS)
+● nginx.service - A high performance web server and a reverse proxy server
+     Loaded: loaded (/usr/lib/systemd/system/nginx.service; enabled; preset: enabled)
+     Active: active (running) since Thu 2026-11-19 19:37:57 -03; 1min 59s ago
+   Main PID: 953 (nginx)
+● alertasp-app.service - AlertaSP API (Spring Boot)
+     Loaded: loaded (/etc/systemd/system/alertasp-app.service; enabled; preset: enabled)
+     Active: active (running) since Thu 2026-11-19 19:37:59 -03; 1min 57s ago
+   Main PID: 988 (java)
+● alertasp-monitor.service - AlertaSP - monitoramento de CPU, memoria, disco e API
+     Loaded: loaded (/etc/systemd/system/alertasp-monitor.service; enabled; preset: enabled)
+     Active: active (running) since Thu 2026-11-19 19:37:55 -03; 2min 1s ago
+   Main PID: 841 (bash)
+
+########## Habilitados no boot
+$ systemctl is-enabled postgresql nginx alertasp-app alertasp-monitor
+enabled
+enabled
+enabled
+enabled
+
+########## API via nginx
+$ curl -s -o /dev/null -w 'HTTP %{http_code} em %{time_total}s\n' http://127.0.0.1/v3/api-docs
+HTTP 200 em 0.015396s
+
+########## Recursos
+$ free -h; df -h /
+               total        used        free      shared  buff/cache   available
+Mem:           3.8Gi       689Mi       3.0Gi        16Mi       358Mi       3.2Gi
+Swap:          2.2Gi          0B       2.2Gi
+Filesystem                         Size  Used Avail Use% Mounted on
+/dev/mapper/ubuntu--vg-ubuntu--lv   12G  6.2G  4.5G  58% /
+
+########## Monitor (ultimas)
+$ tail -20 /var/log/alertasp/monitor.log
+2026-11-19 01:21:52 | METRICA | CPU=2% MEM=20% DISCO=58% APP=active HTTP=200
+2026-11-19 01:22:04 | METRICA | CPU=0% MEM=19% DISCO=58% APP=active HTTP=200
+2026-11-19 01:22:15 | METRICA | CPU=0% MEM=19% DISCO=58% APP=active HTTP=200
+2026-11-19 01:22:21 | INFO    | monitor parado (pid 20429)
+2026-11-19 19:37:55 | INFO    | monitor iniciado (pid 841) limites CPU=80% MEM=85% DISCO=85% intervalo=10s
+2026-11-19 19:37:56 | METRICA | CPU=91% MEM=11% DISCO=58% APP=inactive HTTP=000
+2026-11-19 19:37:56 | ALERTA  | CPU em 91% (limite 80%)
+2026-11-19 19:37:56 | ALERTA  | servico alertasp-app esta 'inactive'
+2026-11-19 19:37:57 | ALERTA  | API sem resposta em http://127.0.0.1/v3/api-docs (HTTP 000)
+2026-11-19 19:38:08 | METRICA | CPU=48% MEM=14% DISCO=58% APP=active HTTP=502
+2026-11-19 19:38:08 | ALERTA  | API sem resposta em http://127.0.0.1/v3/api-docs (HTTP 502)
+2026-11-19 19:38:19 | METRICA | CPU=48% MEM=16% DISCO=58% APP=active HTTP=502
+2026-11-19 19:38:19 | ALERTA  | API sem resposta em http://127.0.0.1/v3/api-docs (HTTP 502)
+2026-11-19 19:38:44 | METRICA | CPU=49% MEM=17% DISCO=58% APP=active HTTP=200
+2026-11-19 19:38:55 | METRICA | CPU=1% MEM=17% DISCO=58% APP=active HTTP=200
+2026-11-19 19:39:07 | METRICA | CPU=1% MEM=17% DISCO=58% APP=active HTTP=200
+2026-11-19 19:39:18 | METRICA | CPU=1% MEM=17% DISCO=58% APP=active HTTP=200
+2026-11-19 19:39:29 | METRICA | CPU=1% MEM=17% DISCO=58% APP=active HTTP=200
+2026-11-19 19:39:40 | METRICA | CPU=5% MEM=17% DISCO=58% APP=active HTTP=200
+2026-11-19 19:39:56 | METRICA | CPU=9% MEM=17% DISCO=58% APP=active HTTP=200
+
+########## Alertas do monitor
+$ grep ALERTA /var/log/alertasp/monitor.log | tail -20
+2026-11-19 00:51:51 | ALERTA  | servico alertasp-app esta 'activating'
+2026-11-19 00:51:51 | ALERTA  | API sem resposta em http://127.0.0.1/v3/api-docs (HTTP 502)
+2026-11-19 00:52:02 | ALERTA  | API sem resposta em http://127.0.0.1/v3/api-docs (HTTP 502)
+2026-11-19 00:53:12 | ALERTA  | memoria em 89% (limite 85%)
+2026-11-19 00:53:23 | ALERTA  | memoria em 89% (limite 85%)
+2026-11-19 00:53:34 | ALERTA  | disco / em 88% (limite 85%)
+2026-11-19 00:53:45 | ALERTA  | disco / em 88% (limite 85%)
+2026-11-19 01:05:16 | ALERTA  | CPU em 83% (limite 80%)
+2026-11-19 01:08:51 | ALERTA  | CPU em 100% (limite 80%)
+2026-11-19 01:12:19 | ALERTA  | API sem resposta em http://127.0.0.1/v3/api-docs (HTTP 502)
+2026-11-19 01:14:40 | ALERTA  | memoria em 89% (limite 85%)
+2026-11-19 01:14:51 | ALERTA  | memoria em 90% (limite 85%)
+2026-11-19 01:15:02 | ALERTA  | memoria em 90% (limite 85%)
+2026-11-19 01:15:13 | ALERTA  | disco / em 88% (limite 85%)
+2026-11-19 01:15:24 | ALERTA  | disco / em 88% (limite 85%)
+2026-11-19 19:37:56 | ALERTA  | CPU em 91% (limite 80%)
+2026-11-19 19:37:56 | ALERTA  | servico alertasp-app esta 'inactive'
+2026-11-19 19:37:57 | ALERTA  | API sem resposta em http://127.0.0.1/v3/api-docs (HTTP 000)
+2026-11-19 19:38:08 | ALERTA  | API sem resposta em http://127.0.0.1/v3/api-docs (HTTP 502)
+2026-11-19 19:38:19 | ALERTA  | API sem resposta em http://127.0.0.1/v3/api-docs (HTTP 502)
+
+########## Auditoria scripts
+$ tail -40 /var/log/alertasp/audit.log
+2026-11-19 00:43:10 | OK    | user=aluno | teste-falha.sh | TESTE: falha detectada e registrada em /var/log/alertasp/audit.log:
+2026-11-19 00:43:10 | OK    | user=aluno | teste-falha.sh | ===== Teste de falha concluido: servicos recuperados e alertas gerados =====
+2026-11-19 00:51:46 | INFO  | user=aluno | teste-falha.sh | ===== Teste de falha =====
+2026-11-19 00:51:46 | INFO  | user=aluno | teste-falha.sh | TESTE: kill -9 em alertasp-monitor (PID 17330)
+2026-11-19 00:51:50 | OK    | user=aluno | teste-falha.sh | TESTE: alertasp-monitor recuperado pelo systemd em 4s (PID 17330 -> 18439)
+2026-11-19 00:51:50 | INFO  | user=aluno | teste-falha.sh | TESTE: kill -9 em alertasp-app (PID 17394)
+2026-11-19 00:51:55 | OK    | user=aluno | teste-falha.sh | TESTE: alertasp-app recuperado pelo systemd em 5s (PID 17394 -> 18500)
+2026-11-19 00:52:11 | OK    | user=aluno | teste-falha.sh | TESTE: API respondendo novamente (HTTP 200) 16s apos reinicio
+2026-11-19 00:52:11 | INFO  | user=aluno | teste-falha.sh | TESTE: monitor gerou 3 alerta(s):
+2026-11-19 00:52:11 | INFO  | user=aluno | teste-falha.sh | TESTE: estressando CPU (todos os nucleos, ~95%) por 40s
+2026-11-19 00:52:51 | INFO  | user=aluno | teste-falha.sh | TESTE: monitor gerou 0 alerta(s):
+2026-11-19 00:52:51 | INFO  | user=aluno | teste-falha.sh | TESTE: ocupando 2738 MB de memoria por 40s para passar de 85%
+2026-11-19 00:53:31 | INFO  | user=aluno | teste-falha.sh | TESTE: monitor gerou 2 alerta(s):
+2026-11-19 00:53:31 | INFO  | user=aluno | teste-falha.sh | TESTE: ocupando 3199 MB em disco para passar de 85%
+2026-11-19 00:53:53 | INFO  | user=aluno | teste-falha.sh | TESTE: arquivo de teste removido, disco liberado
+2026-11-19 00:53:53 | INFO  | user=aluno | teste-falha.sh | TESTE: monitor gerou 2 alerta(s):
+2026-11-19 00:53:53 | INFO  | user=aluno | teste-falha.sh | TESTE: executando script com falha proposital (iniciar servico inexistente)
+2026-11-19 00:53:54 | INFO  | user=aluno | falha-controlada.sh | passo que vai falhar
+2026-11-19 00:53:54 | ERRO  | user=aluno | falha-controlada.sh | falha na linha 1: systemctl start alertasp-inexistente (exit 5)
+2026-11-19 00:53:54 | OK    | user=aluno | teste-falha.sh | TESTE: falha detectada e registrada em /var/log/alertasp/audit.log:
+2026-11-19 00:53:54 | OK    | user=aluno | teste-falha.sh | ===== Teste de falha concluido: servicos recuperados e alertas gerados =====
+2026-11-19 01:12:04 | INFO  | user=aluno | teste-falha.sh | ===== Teste de falha =====
+2026-11-19 01:12:04 | INFO  | user=aluno | teste-falha.sh | TESTE: kill -9 em alertasp-monitor (PID 18439)
+2026-11-19 01:12:08 | OK    | user=aluno | teste-falha.sh | TESTE: alertasp-monitor recuperado pelo systemd em 4s (PID 18439 -> 20429)
+2026-11-19 01:12:08 | INFO  | user=aluno | teste-falha.sh | TESTE: kill -9 em alertasp-app (PID 18500)
+2026-11-19 01:12:13 | OK    | user=aluno | teste-falha.sh | TESTE: alertasp-app recuperado pelo systemd em 5s (PID 18500 -> 20491)
+2026-11-19 01:12:28 | OK    | user=aluno | teste-falha.sh | TESTE: API respondendo novamente (HTTP 200) 15s apos reinicio
+2026-11-19 01:12:28 | INFO  | user=aluno | teste-falha.sh | TESTE: monitor gerou 1 alerta(s):
+2026-11-19 01:12:28 | INFO  | user=aluno | teste-falha.sh | TESTE: estressando CPU (todos os nucleos, ~95%) por 40s
+2026-11-19 01:14:28 | INFO  | user=aluno | teste-falha.sh | TESTE: monitor gerou 0 alerta(s):
+2026-11-19 01:14:28 | INFO  | user=aluno | teste-falha.sh | TESTE: ocupando 2756 MB de memoria por 40s para passar de 85%
+2026-11-19 01:15:08 | INFO  | user=aluno | teste-falha.sh | TESTE: monitor gerou 3 alerta(s):
+2026-11-19 01:15:08 | INFO  | user=aluno | teste-falha.sh | TESTE: ocupando 3183 MB em disco para passar de 85%
+2026-11-19 01:15:30 | INFO  | user=aluno | teste-falha.sh | TESTE: arquivo de teste removido, disco liberado
+2026-11-19 01:15:30 | INFO  | user=aluno | teste-falha.sh | TESTE: monitor gerou 2 alerta(s):
+2026-11-19 01:15:30 | INFO  | user=aluno | teste-falha.sh | TESTE: executando script com falha proposital (iniciar servico inexistente)
+2026-11-19 01:15:30 | INFO  | user=aluno | falha-controlada.sh | passo que vai falhar
+2026-11-19 01:15:30 | ERRO  | user=aluno | falha-controlada.sh | falha na linha 1: systemctl start alertasp-inexistente (exit 5)
+2026-11-19 01:15:30 | OK    | user=aluno | teste-falha.sh | TESTE: falha detectada e registrada em /var/log/alertasp/audit.log:
+2026-11-19 01:15:30 | OK    | user=aluno | teste-falha.sh | ===== Teste de falha concluido: servicos recuperados e alertas gerados =====
+
+########## Auditoria kernel
+$ for k in alertasp_config alertasp_servico alertasp_rede; do ausearch -k $k -i 2>/dev/null | tail -10; done
+type=SYSCALL msg=audit(11/18/2026 23:45:10.286:1472) : arch=x86_64 syscall=fchownat success=yes exit=0 a0=AT_FDCWD a1=0x610ca8260a70 a2=0x0 a3=0x3dc items=1 ppid=14377 pid=14639 auid=aluno uid=root gid=root euid=root suid=root fsuid=root egid=root sgid=root fsgid=root tty=pts3 ses=1 comm=chown exe=/usr/bin/chown subj=unconfined key=alertasp_config 
+----
+type=PROCTITLE msg=audit(11/18/2026 23:45:10.290:1473) : proctitle=chmod 640 /etc/alertasp/alertasp.env 
+type=PATH msg=audit(11/18/2026 23:45:10.290:1473) : item=0 name=/etc/alertasp/alertasp.env inode=264244 dev=fc:00 mode=file,640 ouid=root ogid=alertasp rdev=00:00 nametype=NORMAL cap_fp=none cap_fi=none cap_fe=0 cap_fver=0 cap_frootid=0 
+type=CWD msg=audit(11/18/2026 23:45:10.290:1473) : cwd=/home/aluno/alertasp-os 
+type=SYSCALL msg=audit(11/18/2026 23:45:10.290:1473) : arch=x86_64 syscall=fchmodat success=yes exit=0 a0=AT_FDCWD a1=0x615c016f04d0 a2=0640 a3=0x0 items=1 ppid=14377 pid=14640 auid=aluno uid=root gid=root euid=root suid=root fsuid=root egid=root sgid=root fsgid=root tty=pts3 ses=1 comm=chmod exe=/usr/bin/chmod subj=unconfined key=alertasp_config 
+----
+type=PROCTITLE msg=audit(11/19/2026 19:37:52.286:93) : proctitle=/sbin/auditctl -R /etc/audit/audit.rules 
+type=SYSCALL msg=audit(11/19/2026 19:37:52.286:93) : arch=x86_64 syscall=sendto success=yes exit=1084 a0=0x3 a1=0x7ffe19eda6d0 a2=0x43c a3=0x0 items=0 ppid=622 pid=682 auid=unset uid=root gid=root euid=root suid=root fsuid=root egid=root sgid=root fsgid=root tty=(none) ses=unset comm=auditctl exe=/usr/sbin/auditctl subj=unconfined key=(null) 
+type=CONFIG_CHANGE msg=audit(11/19/2026 19:37:52.286:93) : auid=unset ses=unset subj=unconfined op=add_rule key=alertasp_config list=exit res=yes 
+type=SOCKADDR msg=audit(11/19/2026 19:37:52.290:94) : saddr={ saddr_fam=netlink nlnk-fam=16 nlnk-pid=0 } 
+type=SYSCALL msg=audit(11/19/2026 19:37:52.290:94) : arch=x86_64 syscall=sendto success=yes exit=1112 a0=0x3 a1=0x7ffe19eda6d0 a2=0x458 a3=0x0 items=1 ppid=622 pid=682 auid=unset uid=root gid=root euid=root suid=root fsuid=root egid=root sgid=root fsgid=root tty=(none) ses=unset comm=auditctl exe=/usr/sbin/auditctl subj=unconfined key=(null) 
+type=CONFIG_CHANGE msg=audit(11/19/2026 19:37:52.290:94) : auid=unset ses=unset subj=unconfined op=add_rule key=alertasp_servico list=exit res=yes 
+----
+type=PROCTITLE msg=audit(11/19/2026 19:37:52.290:95) : proctitle=/sbin/auditctl -R /etc/audit/audit.rules 
+type=PATH msg=audit(11/19/2026 19:37:52.290:95) : item=0 name=/etc/systemd/system/ inode=262948 dev=fc:00 mode=dir,755 ouid=root ogid=root rdev=00:00 nametype=PARENT cap_fp=none cap_fi=none cap_fe=0 cap_fver=0 cap_frootid=0 
+type=CWD msg=audit(11/19/2026 19:37:52.290:95) : cwd=/ 
+type=SOCKADDR msg=audit(11/19/2026 19:37:52.290:95) : saddr={ saddr_fam=netlink nlnk-fam=16 nlnk-pid=0 } 
+type=SYSCALL msg=audit(11/19/2026 19:37:52.290:95) : arch=x86_64 syscall=sendto success=yes exit=1116 a0=0x3 a1=0x7ffe19eda6d0 a2=0x45c a3=0x0 items=1 ppid=622 pid=682 auid=unset uid=root gid=root euid=root suid=root fsuid=root egid=root sgid=root fsgid=root tty=(none) ses=unset comm=auditctl exe=/usr/sbin/auditctl subj=unconfined key=(null) 
+type=CONFIG_CHANGE msg=audit(11/19/2026 19:37:52.290:95) : auid=unset ses=unset subj=unconfined op=add_rule key=alertasp_servico list=exit res=yes 
+type=SOCKADDR msg=audit(11/19/2026 19:37:52.290:96) : saddr={ saddr_fam=netlink nlnk-fam=16 nlnk-pid=0 } 
+type=SYSCALL msg=audit(11/19/2026 19:37:52.290:96) : arch=x86_64 syscall=sendto success=yes exit=1084 a0=0x3 a1=0x7ffe19eda6d0 a2=0x43c a3=0x0 items=1 ppid=622 pid=682 auid=unset uid=root gid=root euid=root suid=root fsuid=root egid=root sgid=root fsgid=root tty=(none) ses=unset comm=auditctl exe=/usr/sbin/auditctl subj=unconfined key=(null) 
+type=CONFIG_CHANGE msg=audit(11/19/2026 19:37:52.290:96) : auid=unset ses=unset subj=unconfined op=add_rule key=alertasp_rede list=exit res=yes 
+----
+type=PROCTITLE msg=audit(11/19/2026 19:37:52.291:97) : proctitle=/sbin/auditctl -R /etc/audit/audit.rules 
+type=PATH msg=audit(11/19/2026 19:37:52.291:97) : item=0 name=/etc/ inode=262146 dev=fc:00 mode=dir,755 ouid=root ogid=root rdev=00:00 nametype=PARENT cap_fp=none cap_fi=none cap_fe=0 cap_fver=0 cap_frootid=0 
+type=CWD msg=audit(11/19/2026 19:37:52.291:97) : cwd=/ 
+type=SOCKADDR msg=audit(11/19/2026 19:37:52.291:97) : saddr={ saddr_fam=netlink nlnk-fam=16 nlnk-pid=0 } 
+type=SYSCALL msg=audit(11/19/2026 19:37:52.291:97) : arch=x86_64 syscall=sendto success=yes exit=1080 a0=0x3 a1=0x7ffe19eda6d0 a2=0x438 a3=0x0 items=1 ppid=622 pid=682 auid=unset uid=root gid=root euid=root suid=root fsuid=root egid=root sgid=root fsgid=root tty=(none) ses=unset comm=auditctl exe=/usr/sbin/auditctl subj=unconfined key=(null) 
+type=CONFIG_CHANGE msg=audit(11/19/2026 19:37:52.291:97) : auid=unset ses=unset subj=unconfined op=add_rule key=alertasp_rede list=exit res=yes 
+
+########## Reinicios systemd
+$ journalctl -u alertasp-app -u alertasp-monitor --no-pager | grep -iE 'killed|restart|Started' | tail -20
+Nov 19 00:51:50 alertasp systemd[1]: alertasp-app.service: Main process exited, code=killed, status=9/KILL
+Nov 19 00:51:55 alertasp systemd[1]: alertasp-app.service: Scheduled restart job, restart counter is at 4.
+Nov 19 00:51:55 alertasp systemd[1]: Started alertasp-app.service - AlertaSP API (Spring Boot).
+Nov 19 00:51:57 alertasp java[18500]: 2026-11-19T00:51:57.366-03:00  INFO 18500 --- [alertasp] [           main] b.com.fiap.alertasp.AlertaSpApplication  : Starting AlertaSpApplication v1.0.0 using Java 21.0.13.1 with PID 18500 (/opt/alertasp/app.jar started by alertasp in /opt/alertasp)
+Nov 19 00:52:08 alertasp java[18500]: 2026-11-19T00:52:08.401-03:00  INFO 18500 --- [alertasp] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+Nov 19 00:52:08 alertasp java[18500]: 2026-11-19T00:52:08.410-03:00  INFO 18500 --- [alertasp] [           main] b.com.fiap.alertasp.AlertaSpApplication  : Started AlertaSpApplication in 12.105 seconds (process running for 13.267)
+Nov 19 01:12:04 alertasp systemd[1]: alertasp-monitor.service: Main process exited, code=killed, status=9/KILL
+Nov 19 01:12:07 alertasp systemd[1]: alertasp-monitor.service: Scheduled restart job, restart counter is at 10.
+Nov 19 01:12:07 alertasp systemd[1]: Started alertasp-monitor.service - AlertaSP - monitoramento de CPU, memoria, disco e API.
+Nov 19 01:12:08 alertasp systemd[1]: alertasp-app.service: Main process exited, code=killed, status=9/KILL
+Nov 19 01:12:13 alertasp systemd[1]: alertasp-app.service: Scheduled restart job, restart counter is at 5.
+Nov 19 01:12:13 alertasp systemd[1]: Started alertasp-app.service - AlertaSP API (Spring Boot).
+Nov 19 01:12:16 alertasp java[20491]: 2026-11-19T01:12:16.175-03:00  INFO 20491 --- [alertasp] [           main] b.com.fiap.alertasp.AlertaSpApplication  : Starting AlertaSpApplication v1.0.0 using Java 21.0.13.1 with PID 20491 (/opt/alertasp/app.jar started by alertasp in /opt/alertasp)
+Nov 19 01:12:26 alertasp java[20491]: 2026-11-19T01:12:26.335-03:00  INFO 20491 --- [alertasp] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+Nov 19 01:12:26 alertasp java[20491]: 2026-11-19T01:12:26.344-03:00  INFO 20491 --- [alertasp] [           main] b.com.fiap.alertasp.AlertaSpApplication  : Started AlertaSpApplication in 11.341 seconds (process running for 12.701)
+Nov 19 19:37:55 alertasp systemd[1]: Started alertasp-monitor.service - AlertaSP - monitoramento de CPU, memoria, disco e API.
+Nov 19 19:37:59 alertasp systemd[1]: Started alertasp-app.service - AlertaSP API (Spring Boot).
+Nov 19 19:38:02 alertasp java[988]: 2026-11-19T19:38:02.886-03:00  INFO 988 --- [alertasp] [           main] b.com.fiap.alertasp.AlertaSpApplication  : Starting AlertaSpApplication v1.0.0 using Java 21.0.13.1 with PID 988 (/opt/alertasp/app.jar started by alertasp in /opt/alertasp)
+Nov 19 19:38:19 alertasp java[988]: 2026-11-19T19:38:19.444-03:00  INFO 988 --- [alertasp] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+Nov 19 19:38:19 alertasp java[988]: 2026-11-19T19:38:19.465-03:00  INFO 988 --- [alertasp] [           main] b.com.fiap.alertasp.AlertaSpApplication  : Started AlertaSpApplication in 18.448 seconds (process running for 20.106)

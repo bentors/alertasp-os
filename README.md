@@ -133,7 +133,7 @@ systemctl is-enabled alertasp-monitor     # enabled = sobe com o sistema
 
 As evidências ficam em [`evidencias/`](evidencias/):
 
-- `evidencias-<data>.txt`: relatório gerado por `scripts/coletar-evidencias.sh`.
+- [`evidencias-2026-11-19_193956.txt`](evidencias/evidencias-2026-11-19_193956.txt): relatório gerado por `scripts/coletar-evidencias.sh` logo após um boot (rede, DNS, firewall, portas, serviços, métricas, alertas, auditoria e reinícios feitos pelo systemd).
 - Prints numerados na ordem da demonstração:
 
 | Arquivo | O que mostra |
@@ -144,9 +144,19 @@ As evidências ficam em [`evidencias/`](evidencias/):
 | `04-servicos.png` | `systemctl status` de postgresql, nginx, alertasp-app e alertasp-monitor |
 | `05-swagger.png` | Swagger aberto no navegador do Windows (`http://192.168.56.10/swagger-ui.html`) |
 | `06-monitor.png` | `tail -f /var/log/alertasp/monitor.log` com métricas |
-| `07-teste-falha.png` | Saída do `teste-falha.sh` com recuperações e alertas |
-| `08-auditoria.png` | `audit.log` e `sudo ausearch -k alertasp_config -i` |
-| `09-reboot.png` | Serviços ativos após `sudo reboot` |
+| `07a-teste-falha-monitor.png` | Monitor durante o teste: reinício do monitor, API fora do ar (HTTP 502) e alerta de CPU (83%) |
+| `07b-teste-falha-script.png` | `kill -9` no monitor e na API e recuperação pelo systemd (PIDs novos) |
+| `07c-erro-registrado.png` | Falha real detectada e registrada no `audit.log` (`API nao voltou a responder`) |
+| `07d-teste-falha-completo.png` | Teste completo: recuperação, alertas de disco e falha controlada registrada |
+| `07e-teste-falha-monitor.png` | Monitor com os alertas de API e disco (88%) |
+| `07f-teste-falha-completo.png` | Teste completo com alerta de CPU (81%) |
+| `07g-teste-falha-monitor.png` | Monitor com alertas de CPU e disco |
+| `08-auditoria.png` | `audit.log` (passos e erros) e `ausearch` (auditoria do kernel sobre `/etc/alertasp`) |
+| `09-reboot.png` | Após o boot: serviços ativos, novo início do monitor, API HTTP 200 |
+
+> O alerta de memória (89–90%) aparece no relatório de texto, seção "Alertas do monitor".
+>
+> A VM de teste rodou no VirtualBox sobre Hyper-V (Windows com WSL2/Docker), um modo mais lento em que carga de CPU de 100% chega a congelar a VM. Por isso o estresse de CPU usa 95% em fatias de 1 s, e o teste de falha espera a API por até `API_WAIT` segundos.
 
 ## Logs
 
