@@ -6,6 +6,8 @@ O **AlertaSP** é uma plataforma de prevenção e monitoramento de alagamentos e
 
 Este repositório é a entrega de **Operating Systems**. Ele provisiona automaticamente, via Shell Script, uma VM Linux que hospeda a API AlertaSP (desenvolvida em SOA), com rede, DNS, firewall, banco de dados, proxy reverso, monitoramento, auditoria e teste de falha.
 
+**Vídeo demonstrativo:** https://youtu.be/FV1CGLFQnpA
+
 ## Integrantes
 
 | Nome | RM |
